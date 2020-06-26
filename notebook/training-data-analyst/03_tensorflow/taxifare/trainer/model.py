@@ -104,8 +104,8 @@ def serving_input_fn():
 
 # Create an estimator that we are going to train and evaluate
 def train_and_evaluate(args):
-    #tf.compat.v1.summary.FileWriterCache.clear() # ensure filewriter cache is clear for TensorBoard events file
-    tf.python.summary.FileWriterCache.clear()
+    tf.compat.v1.summary.FileWriterCache.clear() # ensure filewriter cache is clear for TensorBoard events file
+    #tf.python.summary.FileWriterCache.clear()
     
     # DONE: Create tf.estimator.DNNRegressor train and evaluate function passing args['parsed_argument'] from task.py
     opti = tf.keras.optimizers.Adam(learning_rate = 0.01)
