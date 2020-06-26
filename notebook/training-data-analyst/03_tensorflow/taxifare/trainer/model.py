@@ -41,34 +41,35 @@ DEFAULTS = [[0.0], [-74.0], [40.0], [-74.0], [40.7], [1.0], ['nokey']]
 
 # DONE: Create an appropriate input function read_dataset
 def read_dataset(filename, mode, batch_size = 512):
+    def _input_fn():  
+        def decode_csv(row):
+            columns = tf.io.decode_csv(row, record_defaults = DEFAULTS)
+            features = dict(zip(CSV_COLUMNS, columns))
+            features.pop('key') # not needed, since it's not a feature
+            label = features.pop('fare_amount') # remove label from features and store
+            return features, label
 
-    def decode_csv(row):
-        columns = tf.io.decode_csv(row, record_defaults = DEFAULTS)
-        features = dict(zip(CSV_COLUMNS, columns))
-        features.pop('key') # not needed, since it's not a feature
-        label = features.pop('fare_amount') # remove label from features and store
-        return features, label
+        # Create list of file names that match "glob" pattern (i.e. data_file_*.csv)
+        filenames_dataset = tf.data.Dataset.list_files(filename, shuffle=False)
+        # Read lines from text files
+        textlines_dataset = filenames_dataset.flat_map(tf.data.TextLineDataset)
+        # Parse text lines as comma-separated values (CSV)
+        dataset = textlines_dataset.map(decode_csv)
+
+        # Note:
+        # use tf.data.Dataset.flat_map to apply one to many transformations (here: filename -> text lines)
+        # use tf.data.Dataset.map      to apply one to one  transformations (here: text line -> feature list)
+
+        if mode == tf.estimator.ModeKeys.TRAIN:
+            num_epochs = None # loop indefinetly
+            dataset = dataset.shuffle(buffer_size = 10 * batch_size, seed = 42)
+        else:
+            num_epochs = 1 # one run and it's over
+
+        dataset = dataset.repeat(num_epochs).batch(batch_size)
+        return dataset
     
-    # Create list of file names that match "glob" pattern (i.e. data_file_*.csv)
-    filenames_dataset = tf.data.Dataset.list_files(filename, shuffle=False)
-    # Read lines from text files
-    textlines_dataset = filenames_dataset.flat_map(tf.data.TextLineDataset)
-    # Parse text lines as comma-separated values (CSV)
-    dataset = textlines_dataset.map(decode_csv)
-    
-    # Note:
-    # use tf.data.Dataset.flat_map to apply one to many transformations (here: filename -> text lines)
-    # use tf.data.Dataset.map      to apply one to one  transformations (here: text line -> feature list)
-    
-    if mode == tf.estimator.ModeKeys.TRAIN:
-        num_epochs = None # loop indefinetly
-        dataset = dataset.shuffle(buffer_size = 10 * batch_size, seed = 42)
-    else:
-        num_epochs = 1 # one run and it's over
-    
-    dataset = dataset.repeat(num_epochs).batch(batch_size)
-    
-    return dataset
+    return _input_fn
 
 # Define your feature columns
 INPUT_COLUMNS = [
@@ -89,10 +90,9 @@ feature_cols = add_more_features(INPUT_COLUMNS)
 # Create your serving input function so that your trained model will be able to serve predictions
 def serving_input_fn():
     serving_input_fn = tf.estimator.export.build_parsing_serving_input_receiver_fn(
-      tf.feature_column.make_parse_example_spec(INPUT_COLUMNS))
+        tf.feature_column.make_parse_example_spec(INPUT_COLUMNS))
     serving_input_receiver = serving_input_fn()
     return serving_input_receiver
-
 
 # Create an estimator that we are going to train and evaluate
 def train_and_evaluate(args):
@@ -108,20 +108,20 @@ def train_and_evaluate(args):
         #, optimizer=opti,
 
     train_spec=tf.estimator.TrainSpec(
-        input_fn = lambda: read_dataset(args['train_data_paths'], 
+        input_fn = read_dataset(args['train_data_paths'], 
                                        batch_size = args['train_batch_size'],
                                        mode = tf.estimator.ModeKeys.TRAIN),
-                                       max_steps = args['train_steps'])
+        max_steps = args['train_steps'])
     
     exporter = tf.estimator.LatestExporter('exporter', serving_input_fn)
 
     eval_spec=tf.estimator.EvalSpec(
-        input_fn = lambda: read_dataset(args['eval_data_paths'], 
+        input_fn = read_dataset(args['eval_data_paths'], 
                                         batch_size = 10000,
                                         mode=tf.estimator.ModeKeys.EVAL),
-                                        steps=None,
-                                        start_delay_secs = args['eval_delay_secs'], # start evaluating after N seconds
-                                        throttle_secs = args['throttle_secs'],  # evaluate every N seconds
-                                        exporters = exporter)
+        steps=None,
+        start_delay_secs = args['eval_delay_secs'], # start evaluating after N seconds
+        throttle_secs = args['throttle_secs'],  # evaluate every N seconds
+        exporters = exporter)
         
     tf.estimator.train_and_evaluate(estimator, train_spec, eval_spec)
