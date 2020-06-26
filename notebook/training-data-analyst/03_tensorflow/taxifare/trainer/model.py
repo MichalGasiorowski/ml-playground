@@ -88,11 +88,19 @@ def add_more_features(feats):
 feature_cols = add_more_features(INPUT_COLUMNS)
 
 # Create your serving input function so that your trained model will be able to serve predictions
-def serving_input_fn():
+def serving_input_fn2():
     serving_input_fn = tf.estimator.export.build_parsing_serving_input_receiver_fn(
         tf.feature_column.make_parse_example_spec(INPUT_COLUMNS))
     serving_input_receiver = serving_input_fn()
     return serving_input_receiver
+
+def serving_input_fn():
+    feature_placeholders = {
+        column.name: tf.compat.v1.placeholder(tf.float32, [None]) for column in INPUT_COLUMNS
+    }
+
+    features = feature_placeholders
+    return tf.estimator.export.ServingInputReceiver(features, feature_placeholders)
 
 # Create an estimator that we are going to train and evaluate
 def train_and_evaluate(args):
