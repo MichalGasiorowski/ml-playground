@@ -21,7 +21,12 @@ from __future__ import print_function
 import tensorflow as tf
 import numpy as np
 
-tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.INFO)
+import logging
+
+logger = tf.get_logger()
+logger.setLevel(logging.INFO)
+
+#tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.INFO)
 
 CSV_COLUMNS = 'fare_amount,dayofweek,hourofday,pickuplon,pickuplat,dropofflon,dropofflat,passengers,key'.split(',')
 LABEL_COLUMN = 'fare_amount'
