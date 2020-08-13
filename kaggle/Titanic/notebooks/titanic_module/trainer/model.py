@@ -15,7 +15,7 @@ logger.setLevel(logging.INFO)
 
 
 
-CSV_COLUMNS = 'fare_amount,dayofweek,hourofday,pickuplon,pickuplat,dropofflon,dropofflat,passengers,key'.split(',')
+#CSV_COLUMNS = 'fare_amount,dayofweek,hourofday,pickuplon,pickuplat,dropofflon,dropofflat,passengers,key'.split(',')
 CSV_COLUMNS = 'PassengerId,Survived,Pclass,Name,Sex,Age,SibSp,Parch,Ticket,Fare,Cabin,Embarked'.split(',')
 LABEL_COLUMN = 'Survived'
 KEY_FEATURE_COLUMN = 'PassengerId'
@@ -26,9 +26,11 @@ DEFAULTS = [[99999], [0], [3], ['John Smith'], ['male'], [24.0], [0], [0], [3470
 # These are the raw input columns, and will be provided for prediction also
 INPUT_COLUMNS = [
     # Define features
-    tf.feature_column.categorical_column_with_vocabulary_list('dayofweek', vocabulary_list = ['Sun', 'Mon', 'Tues', 'Wed', 'Thu', 'Fri', 'Sat']),
-    tf.feature_column.categorical_column_with_identity('hourofday', num_buckets = 24),
-
+    tf.feature_column.categorical_column_with_identity('Pclass', num_buckets = 3, default_value=3), # same as pd.to_dummies
+    tf.feature_column.categorical_column_with_vocabulary_list('Sex', vocabulary_list = ['male', 'female']),
+    tf.feature_column.numeric_column('Age'),
+    
+    
     # Numeric columns
     tf.feature_column.numeric_column('pickuplat'),
     tf.feature_column.numeric_column('pickuplon'),
